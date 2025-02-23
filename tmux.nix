@@ -24,6 +24,11 @@ let
   '') plugins);
 
   config = ''
+    set-option -g prefix C-Space
+    set-option -g base-index 1
+    setw -g mode-keys vi
+    set-option -g default-shell ${pkgs.zsh}/bin/zsh
+
     ${mkPluginCfg plugins}
   # ------
   '';

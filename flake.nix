@@ -15,10 +15,10 @@
       pkgs = import nixpkgs-unstable {
         inherit system;
     };
-    in{
-
-    # overlays.default = final: prev: {
-    # };
+    in rec{
+    overlays.default = super: self: {
+      tmux-custom = packages.${super.system}.default;
+    };
 
     packages.${system}.default =  import ./tmux.nix {inherit pkgs minimal-tmux;};
   };
