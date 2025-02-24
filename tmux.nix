@@ -1,57 +1,52 @@
-inputs @ {pkgs, ...}: 
-let
-  lib = pkgs.lib;
-  plugins = with pkgs.tmuxPlugins; [
-    {
-      plugin = vim-tmux-navigator;
-      config = ''
-      '';
-    }
-    {
-      plugin = inputs.minimal-tmux.packages.${pkgs.system}.default;
-      config = ''
-        set -g @minimal-tmux-status "top"
-      '';
-    }
-  ];
+inputs @ {
+  lib,
+  callPackage,
+  stdenv,
+  tmux,
+  writeShellApplication,
+  fzf
+}: let
+  plugins = callPackage ./plugins.nix {};
   getPluginName = plugin: lib.strings.removePrefix "tmuxplugin-" plugin.pname;
-  mkPluginCfg = plugins: builtins.concatStringsSep "\n"
+  mkPluginCfg = plugins:
+    builtins.concatStringsSep "\n"
     (map (p: ''
-    # ------ ${getPluginName p.plugin} config 
-    ${p.config}
+        # ------ ${getPluginName p.plugin} config
+        ${
+          if p ? config
+          then p.config
+          else ""
+        }
 
-    run-shell ${p.plugin.rtp}
-    # ------
-    '') plugins);
+        run-shell ${p.plugin.rtp}
+      '')
+      plugins);
 
-    # set-option -g default-shell ${pkgs.zsh}/bin/zsh
+  generalCfg = builtins.readFile ./tmux.conf;
+  pluginCfg = mkPluginCfg plugins;
   config = ''
-    set-option -g prefix C-Space
+    # ---- General Config ------
+    ${generalCfg}
 
-    set-option -g base-index 1
-
-    setw -g mode-keys vi
-
-    ${mkPluginCfg plugins}
+    # ----- Plugin Config ------
+    ${pluginCfg}
   '';
-  rtp = pkgs.stdenv.mkDerivation {
+  rtp = stdenv.mkDerivation {
     name = "tmux-config";
     src = ./.;
-    # buildInputs = with pkgs.tmuxPlugins; [
-    # ];
-    phases = ["installPhase" ];
+    phases = ["installPhase"];
     installPhase = ''
       mkdir -p $out
       touch $out/tmux.conf
-      echo "${config}" >> $out/tmux.conf
+      cat <<EOF > $out/tmux.conf
+      ${config}
     '';
   };
-
 in
-   pkgs.writeShellApplication {
+  writeShellApplication {
     name = "tmux";
-    runtimeInputs = []; 
+    runtimeInputs = [fzf];
     text = ''
-      ${pkgs.tmux}/bin/tmux -f ${rtp}/tmux.conf "$@"
+      ${tmux}/bin/tmux -f ${rtp}/tmux.conf "$@"
     '';
-}
+  }

@@ -4,13 +4,9 @@
   inputs = {
     nixpkgs.url = "nixpkgs/nixos-24.11";
     nixpkgs-unstable.url = "nixpkgs/nixos-unstable";
-    minimal-tmux = {
-      url = "github:niksingh710/minimal-tmux-status";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
 
-  outputs = inputs @ { self, nixpkgs, nixpkgs-unstable, minimal-tmux, ...}: let
+  outputs = inputs @ { self, nixpkgs, nixpkgs-unstable, ...}: let
       system = "x86_64-linux";
       pkgs = import nixpkgs-unstable {
         inherit system;
@@ -20,6 +16,6 @@
       tmux-custom = packages.${super.system}.default;
     };
 
-    packages.${system}.default =  import ./tmux.nix {inherit pkgs minimal-tmux;};
+    packages.${system}.default =  pkgs.callPackage ./tmux.nix {};
   };
 }
