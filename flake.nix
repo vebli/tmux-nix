@@ -17,7 +17,7 @@
     };
     in rec{
     overlays.default = super: self: {
-      tmux= packages.${super.system}.default;
+      tmux-custom = packages.${super.system}.default;
     };
 
     packages.${system}.default =  import ./tmux.nix {inherit pkgs minimal-tmux;};

@@ -49,7 +49,7 @@ let
 
 in
    pkgs.writeShellApplication {
-    name = "tmux-custom";
+    name = "tmux";
     runtimeInputs = []; 
     text = ''
       ${pkgs.tmux}/bin/tmux -f ${rtp}/tmux.conf "$@"
