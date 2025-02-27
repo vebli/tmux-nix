@@ -2,5 +2,8 @@
   # {
   #   plugin = vim-tmux-navigator;
   # }
+  {
+    plugin = tmux-fzf;
+  }
 ]
 

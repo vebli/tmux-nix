@@ -4,7 +4,10 @@ inputs @ {
   stdenv,
   tmux,
   writeShellApplication,
-  fzf
+  fzf,
+  pstree,
+  copyq,
+
 }: let
   plugins = callPackage ./plugins.nix {};
   getPluginName = plugin: lib.strings.removePrefix "tmuxplugin-" plugin.pname;
@@ -45,7 +48,7 @@ inputs @ {
 in
   writeShellApplication {
     name = "tmux";
-    runtimeInputs = [fzf];
+    runtimeInputs = [fzf pstree copyq];
     text = ''
       ${tmux}/bin/tmux -f ${rtp}/tmux.conf "$@"
     '';
