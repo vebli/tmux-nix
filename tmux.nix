@@ -39,6 +39,7 @@ inputs @ {
     installPhase = ''
       mkdir -p $out
       touch $out/tmux.conf
+      cp -r $src/scripts $out
       cat <<EOF > $out/tmux.conf
       ${config}
     '';
