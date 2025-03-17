@@ -40,6 +40,7 @@ inputs @ {
       mkdir -p $out
       touch $out/tmux.conf
       cp -r $src/scripts $out
+      chmod u+x $out/scripts/*
       cat <<EOF > $out/tmux.conf
       ${config}
     '';
