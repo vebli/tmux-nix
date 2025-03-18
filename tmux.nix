@@ -42,6 +42,7 @@ inputs @ {
       cp -r $src/scripts $out
       chmod u+x $out/scripts/*
       cat <<EOF > $out/tmux.conf
+      set -g @v_conf_dir $out 
       ${config}
     '';
   };
