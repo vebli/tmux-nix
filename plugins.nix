@@ -1,6 +1,6 @@
 {tmuxPlugins}: with tmuxPlugins; [
-  {
-    plugin = resurrect;
-  }
+  { plugin = resurrect; }
+  # { plugin = open; }
+  # { plugin = copycat; }
 ]
 
