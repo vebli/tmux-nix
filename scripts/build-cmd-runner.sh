@@ -48,7 +48,7 @@ edit_cmd_current(){
 run_cmd_current(){
     CMD=$(get_cmd_current)
     if [[ -n "$CMD" ]]; then
-        tmux_run_cmd "$CMD"
+        tmux_run_cmd_in_split "$CMD"
     else
         echo "No build command set."
     fi
