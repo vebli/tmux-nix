@@ -17,11 +17,12 @@ main(){
 
 open_project() {
     { read -r key; read -r selected; } < <(
-        for dir in "${PROJECT_DIRS[@]}"; do
-            find "$dir" -mindepth 1 -maxdepth 1 -type d 2>/dev/null 
-        done | while read -r path; do
-            printf "%s\t%s\n" "$(basename "$path")" "$path"
-        done | fzf --ansi --tmux \
+        find "${PROJECT_DIRS[@]}" -mindepth 1 -maxdepth 1 -type d 2>/dev/null |\
+        while read -r path; do
+            relpath="${path/#$HOME\//}"  
+            printf "%s\t%s\n" "$relpath" "$path"
+        done | \
+         fzf --ansi --tmux\
                    --expect=enter \
                    --with-nth=1 \
                    --delimiter="\t"
