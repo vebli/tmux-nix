@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
 source "$(dirname "$0")/util/tmux.sh"
 
@@ -6,6 +7,10 @@ PROJECT_DIRS=(
     "$HOME/code/projects"
     "$HOME/code/tools"
 )
+
+list_project_dirs(){
+    find "${PROJECT_DIRS[@]}" -mindepth 1 -maxdepth 1 -type d 2>/dev/null
+}
 
 main(){
     case "$1" in
@@ -15,67 +20,48 @@ main(){
     esac
 }
 
-open_project() {
-    { read -r key; read -r selected; } < <(
-        find "${PROJECT_DIRS[@]}" -mindepth 1 -maxdepth 1 -type d 2>/dev/null |\
-        while read -r path; do
-            relpath="${path/#$HOME\//}"  
-            printf "%s\t%s\n" "$relpath" "$path"
-        done | \
-         fzf --ansi --tmux\
-                   --expect=enter \
-                   --with-nth=1 \
-                   --delimiter="\t"
-    )
-    local name=$(basename "$fullpath")
-    case $key in
-        enter)
-            fullpath="${selected#*$'\t'}"
-            name="$(basename "$fullpath")"
-            tmux_goto_session "$name" -c "$fullpath"
-        ;;
-    esac
-}
-
 kill_unnamed_session(){
     # Deletes numbered sessions 
     local regex="^[0-9]+$"
-    local current_session=tmux_current_session
-     
     for session in $(tmux_list_sessions); do 
         # TODO: Breaks for session names with spaces 
         if [[ "$session" =~ $regex ]]; then
-            tmux_kill_session "$current_session"
+            tmux_kill_session "$session"
         fi
     done
 }
-
 manage_sessions() {
-    local sessions=tmux_list_sessions    
     while true; do 
-        { read -r key;  read -r name; } < <( "$sessions" | fzf --ansi --tmux\
-            --expect=ctrl-a,ctrl-d,ctrl-e,enter\
-            --header="ctrl-a: add | ctrl-d: delete | ctrl-c: clear | ctrl-e: edit | enter: attach" 
-        )
-        case $key in 
-            enter) 
-                if tmux has-session -t="$name" 2>/dev/null; then
-                    tmux switch-client -t "$name"
-                fi
-                break
-                ;;
-            ctrl-a) 
-                open_project
-                break
-                ;;
-            ctrl-c) 
-                kill_unnamed_session
-                ;;
-            ctrl-d) 
-                #TODO: Menu closes if current session is deleted. 
-                tmux_kill_session "$name"
-        esac
-    done
-}
+        # all_sessions=($(tmux_list_sessions))
+        local all_sessions proj_dirs num_active_sessions
+        mapfile -t all_sessions < <(tmux_list_sessions)
+        num_active_sessions=${#all_sessions[@]}
+        echo $num_active_sessions
+        proj_dirs=$(echo "$(list_project_dirs)")
+        for dir in $proj_dirs; do
+            if printf '%s\n' "${all_sessions[@]}" | grep -qx "$(basename "$dir")"; then
+                continue
+            else
+                all_sessions+=("$(basename "$dir")")
+            fi
+        done
+        for i in $(seq $((num_active_sessions - 1)) -1 0); do
+            all_sessions[i]="* ${all_sessions[i]}" 
+        done
+        { read -r key;  read -r name_with_prefix; } < <( printf "%s\n" "${all_sessions[@]}" |
+            sort -k1,1r|\
+                fzf --ansi --tmux --tac\
+                --expect=ctrl-q,ctrl-d,ctrl-e,ctrl-c,enter\
+                --header="enter: attach | ctrl-d: delete | ctrl-c: clear | ctrl-q: quit" 
+            )
+            local name=${name_with_prefix/*\ /}
+            case "$key" in 
+                enter) tmux_goto_session "$name"; return;;
+                ctrl-c) kill_unnamed_session ;;
+                ctrl-d) tmux_kill_session "$name" ;;
+                ctrl-q) return;;
+            esac
+        done
+    }
 
 main "$@"
