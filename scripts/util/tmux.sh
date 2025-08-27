@@ -51,13 +51,13 @@ tmux_run_cmd_in_split(){
 tmux_prompt(){
     # Returns user input as string
     local prompt="$1"
-    local inputs="$2"
+    local inputs=${2:-}
     local tmp_file="/tmp/tmux_prompt"
     if [ -d tmp_file ]; then 
         rm tmp_file
     fi
 
-    tmux command-prompt -p "$prompt" -I "${inputs:-}" "run-shell 'echo %% > $tmp_file'"
+    tmux command-prompt -p "$prompt" -I "$inputs" "run-shell 'echo %% > $tmp_file'"
     cat $tmp_file
 }
 

@@ -18,6 +18,7 @@ main(){
         --proj) open_project;;
         --manage) manage_sessions;;
     esac
+    return 0
 }
 
 kill_unnamed_session(){
@@ -30,7 +31,7 @@ kill_unnamed_session(){
         fi
     done
 }
-manage_sessions() {
+manage_sessions() { #TODO: Breaks if session name has spaces or starts with *
     while true; do 
         # all_sessions=($(tmux_list_sessions))
         local all_sessions proj_dirs num_active_sessions
@@ -57,9 +58,10 @@ manage_sessions() {
             local name=${name_with_prefix/*\ /}
             case "$key" in 
                 enter) tmux_goto_session "$name"; return;;
-                ctrl-c) kill_unnamed_session ;;
-                ctrl-d) tmux_kill_session "$name" ;;
                 ctrl-q) return;;
+                ctrl-c) kill_unnamed_session ;;
+                ctrl-d) kill_unnamed_session ;;
+                # ctrl-d) tmux_kill_session "$name" ;;
             esac
         done
     }
