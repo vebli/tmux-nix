@@ -18,7 +18,6 @@ main(){
     fi 
 
     case $1 in
-        menu) shift 1; menu "$@";;
         run) shift 1; run "$@";;
         set) shift 1; setc "$@";;
         del|delete) shift 1; delete "$@";;
@@ -26,19 +25,6 @@ main(){
         *) usage; return 1 ;; 
     esac
     return 0;
-}
-
-edit_json(){
-    local dir="" command_key="" command_val="" cfg=""
-    tmpfile="$(mktemp)"
-    cfg="$(get_cfg)"
-    echo "$cfg"> "$tmpfile" && $EDITOR "$tmpfile"
-    if jq empty "$tmpfile" &>/dev/null ; then 
-        update_cfg "$(cat "$tmpfile")"
-    else
-        return 1
-    fi
-
 }
 
 delete(){
@@ -85,7 +71,7 @@ setc(){
 }
 
 run(){
-    local dir="" command_key="" cfg=""
+    local dir="" command_key="" command_val="" cfg=""
     while [[ $# -gt 0 ]]; do
         case $1 in 
             --dir) dir="$2"; shift 2;; 
@@ -94,14 +80,17 @@ run(){
     done
 
     if [ -z "$dir" ]; then dir="$(pwd)"; fi
-    if [ -z "$command_key" ]; then command_key="build"; fi
+    if [ -z "$command_key" ]; then 
+        local selected="$(jq -r --arg dir "$dir" \
+            '.[$dir] | to_entries[] | "\(.key)\t\(.value)"' \
+            "$BUILD_CFG_FILE" |\
+            fzf --tmux --ansi 
+        )" 
+        command_key="${selected%%$'\t'*}"  
+        command_val="${selected#*$'\t'}"
+    fi
 
-    if ! run_command "$dir" "$command_key"; then 
-        command_val=$(tmux_prompt "Enter command for '$command_key': ")
-        cfg="$(get_cfg "$dir" "$command_key" "$command_val")"
-        update_cfg "$cfg"
-        run_command "$dir" "$command_key" "$command_val"
-    fi 
+    run_core "$dir" "$command_key" "$command_val"
 }
 
 usage(){ #TODO
@@ -110,10 +99,8 @@ usage(){ #TODO
 }
 
 
-run_command(){
-    local dir="" command_key="" command_val=""
-    dir="$1"
-    command_key="$2"
+run_core(){
+    local dir="${1:-}" command_key="${2:-}" command_val=""
     command_val="$(get_cfg "$dir" "$command_key")"
     if [ -n "$command_val" ] && [ "$command_val" != "null" ]; then
         eval "$command_val"
@@ -124,9 +111,7 @@ run_command(){
 }
 
 get_cfg(){
-    local dir="" command_key="" cfg=""
-    dir="$1"
-    command_key="$2"
+    local dir="${1:-}" command_key="${2:-}" cfg=""
 
     if [ -z "$dir" ] && [ -z "$command_key" ] && [ -z "$command_val" ]; then 
         cfg="$(cat "$BUILD_CFG_FILE")"; 
@@ -148,8 +133,7 @@ get_cfg(){
     echo "$cfg"
 }
 update_cfg(){
-    local new_cfg="" tempfile=""
-    new_cfg="$1"
+    local new_cfg="$1" tempfile=""
     tmpfile=$(mktemp)
     echo "$new_cfg" > "$tmpfile" && mv "$tmpfile" "$BUILD_CFG_FILE"
 }
