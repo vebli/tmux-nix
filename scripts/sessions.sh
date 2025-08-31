@@ -60,8 +60,7 @@ manage_sessions() { #TODO: Breaks if session name has spaces or starts with *
                 enter) tmux_goto_session "$name"; return;;
                 ctrl-q) return;;
                 ctrl-c) kill_unnamed_session ;;
-                ctrl-d) kill_unnamed_session ;;
-                # ctrl-d) tmux_kill_session "$name" ;;
+                ctrl-d) tmux_kill_session "$name" ;;
             esac
         done
     }
