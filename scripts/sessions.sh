@@ -14,9 +14,10 @@ list_project_dirs(){
 
 main(){
     case "$1" in
-        --clear) kill_unnamed_session;;
-        --proj) open_project;;
-        --manage) manage_sessions;;
+        clear) kill_unnamed_session;;
+        proj|projects) open_project;;
+        menu) manage_sessions;;
+        *) return 1;
     esac
     return 0
 }

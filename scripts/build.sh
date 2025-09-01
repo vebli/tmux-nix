@@ -4,6 +4,7 @@ source "$(dirname "$0")/util/tmux.sh"
 
 BUILD_CFG_DIR="$HOME/.local/share/tmux"
 BUILD_CFG_FILE="$BUILD_CFG_DIR/build.json"
+BUILD_CFG_LOG_DIR="$BUILD_CFG_DIR/logs"
 
 main(){
     local dir="" command_key="" command_val="" option="${1:-}"
@@ -11,11 +12,18 @@ main(){
         mkdir -p "$BUILD_CFG_DIR"
     fi 
 
+    if [ ! -d "BUILD_CFG_LOG_DIR" ]; then 
+        mkdir -p "$BUILD_CFG_LOG_DIR"
+    fi 
+
     if [ ! -f "$BUILD_CFG_FILE" ]; then 
         touch "$BUILD_CFG_FILE"
         echo "{}" > "$BUILD_CFG_FILE"
 
     fi 
+    if ! is_valid_json_file "$BUILD_CFG_FILE"; then
+        edit_json 
+    fi
 
     shift 1;
     while [[ $# -gt 0 ]]; do
@@ -32,8 +40,9 @@ main(){
         run) run "$dir" "$command_key";;
         del|delete) delete "$dir" "$command_key";;
         set) setc "$dir" "$command_key" "$command_val";;
-        edit) edit_json;;
+        edit) edit_json "$dir";;
         gen|gen-commands) gen_commands "$dir";;
+        log) show_log "$command_key";;
         help|--help) usage;;
         *) usage; return 1 ;; 
     esac
@@ -67,6 +76,30 @@ menu(){
             ctrl-q|ctrl-c) return;;
         esac
     done
+}
+edit_json(){
+    local dir="${1:-}" tmpfile=""
+    tmpfile="$(mktemp)"
+    if [ -z "$dir" ]; then dir="$(pwd)"; fi
+    if [ ! -f "$tmpfile" ]; then return 1; fi 
+    cat "$BUILD_CFG_FILE" > "$tmpfile"
+    if [ -z "$EDITOR" ]; then
+        tmux display-message "No editor specified"
+    fi
+    if { [ "$EDITOR" == "vim" ] || [ "$EDITOR" == "nvim" ]; } && cat "$BUILD_CFG_FILE" | grep "$dir" &> /dev/null; then #Jump cursor to current project folder
+        local dir_escaped="${dir//\//\\/}"
+        "$EDITOR" "+/$dir_escaped" "$tmpfile" 
+    else
+        "$EDITOR" "$tmpfile"
+    fi
+
+    if is_valid_json_file "$tmpfile"; then 
+        update_cfg "$(cat "$tmpfile")"
+        return 0
+    else
+        tmux display-message "Invalid json"
+        return 1
+    fi
 }
 
 gen_commands(){
@@ -118,10 +151,10 @@ setc(){
 
 
 run(){
-    local dir="${1:-"$(pwd)"}" command_key="${2:-}" command_val=""
+    local dir="${1:-"$(pwd)"}" command_key="${2:-}" command_val="" selected=""
 
     if [ -z "$command_key" ]; then 
-        local selected="$(jq -r --arg dir "$dir" \
+        selected="$(jq -r --arg dir "$dir" \
             '.[$dir] | to_entries[] | "\(.key)\t\(.value)"' \
             "$BUILD_CFG_FILE" |\
             fzf --tmux --ansi 
@@ -165,12 +198,29 @@ run_core(){
     local dir="${1:-}" command_key="${2:-}" command_val=""
 
     command_val="$(get_cfg_command "$dir" "$command_key")"
+    # sed to filter cursor movement escape codes
     if [ -n "$command_val" ] && [ "$command_val" != "null" ]; then
-        bash -c "$command_val"
+        tmux split-window -v -l 30% "cd '$dir' && { $command_val; } 2>&1 | sed -r 's/\x1B\[([0-9;]*[A-Za-z])//g' | tee $BUILD_CFG_LOG_DIR/$command_key.log;"
     else 
         return 1
     fi
     return 0
+}
+
+show_log(){
+    local command_key="${1:-}" 
+    if [ -z "$command_key" ]; then 
+        tmux display-message "Missing argument key"
+        return 1
+    fi
+
+    local logfile="$BUILD_CFG_LOG_DIR/$command_key.log"
+    if [ ! -s "$logfile" ]; then
+        tmux display-message "No log for $command_key"
+        return 1
+    fi
+
+    tmux split-window -v -l 30% "less +G -R '$logfile'"
 }
 
 get_cfg_dir(){
@@ -203,14 +253,15 @@ set_cfg_command(){
     update_cfg "$cfg"
 }
 
-is_valid_json(){
-    local json="${1:-}"
-    return "$(jq emtpy "$json")" &> /dev/null
+is_valid_json_file(){
+    local file="${1:-}"
+    jq empty "$file" >/dev/null 2>&1
 }
 
 update_cfg(){
-    local new_cfg="$1" tempfile=""
-    tmpfile=$(mktemp)
+    local new_cfg="${1:-}" tmpfile=""
+    tmpfile="$(mktemp)"
+    if [ ! -f "$tmpfile" ] || [ -z "$new_cfg" ]; then return 1; fi 
     echo "$new_cfg" > "$tmpfile" && mv "$tmpfile" "$BUILD_CFG_FILE"
 }
 
