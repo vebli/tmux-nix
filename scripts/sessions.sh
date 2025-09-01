@@ -32,38 +32,48 @@ kill_unnamed_session(){
         fi
     done
 }
-manage_sessions() { #TODO: Breaks if session name has spaces or starts with *
+manage_sessions() {
+    declare -A dir_map
     while true; do 
-        # all_sessions=($(tmux_list_sessions))
         local all_sessions proj_dirs num_active_sessions
         mapfile -t all_sessions < <(tmux_list_sessions)
         num_active_sessions=${#all_sessions[@]}
         echo $num_active_sessions
-        proj_dirs=$(echo "$(list_project_dirs)")
+
+        proj_dirs="$(list_project_dirs)"
         for dir in $proj_dirs; do
-            if printf '%s\n' "${all_sessions[@]}" | grep -qx "$(basename "$dir")"; then
+            session_name="$(basename "$dir")"
+            dir_map["$session_name"]="$dir"
+
+            if printf '%s\n' "${all_sessions[@]}" | grep -qx "$session_name"; then
                 continue
             else
-                all_sessions+=("$(basename "$dir")")
+                all_sessions+=("$session_name")
             fi
         done
+
         for i in $(seq $((num_active_sessions - 1)) -1 0); do
             all_sessions[i]="* ${all_sessions[i]}" 
         done
-        { read -r key;  read -r name_with_prefix; } < <( printf "%s\n" "${all_sessions[@]}" |
-            sort -k1,1r|\
-                fzf --ansi --tmux --tac\
-                --expect=ctrl-q,ctrl-d,ctrl-e,ctrl-c,enter\
-                --header="enter: attach | ctrl-d: delete | ctrl-c: clear | ctrl-q: quit" 
-            )
-            local name=${name_with_prefix/*\ /}
-            case "$key" in 
-                enter) tmux_goto_session "$name"; return;;
-                ctrl-q) return;;
-                ctrl-c) kill_unnamed_session ;;
-                ctrl-d) tmux_kill_session "$name" ;;
-            esac
-        done
-    }
+
+        { read -r key; read -r name_with_prefix; } < <(
+            printf "%s\n" "${all_sessions[@]}" |
+            sort -k1,1r |
+            fzf --ansi --tmux --tac \
+                --expect=ctrl-q,ctrl-d,ctrl-e,ctrl-c,enter \
+                --header="enter: attach | ctrl-d: delete | ctrl-c: clear | ctrl-q: quit"
+        )
+
+        local name=${name_with_prefix/*\ /}
+        local fullpath="${dir_map[$name]}"
+
+        case "$key" in 
+            enter) tmux_goto_session "$name" -c "$fullpath"; return ;;
+            ctrl-q) return ;;
+            ctrl-c) kill_unnamed_session ;;
+            ctrl-d) tmux_kill_session "$name" ;;
+        esac
+    done
+}
 
 main "$@"

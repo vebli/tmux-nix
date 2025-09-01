@@ -7,6 +7,7 @@ inputs @ {
   fzf,
   pstree,
   jq,
+  coreutils,
 }: let
   plugins = callPackage ./plugins.nix {};
   getPluginName = plugin: lib.strings.removePrefix "tmuxplugin-" plugin.pname;
@@ -51,7 +52,7 @@ inputs @ {
 in
   writeShellApplication {
     name = "tmux";
-    runtimeInputs = [fzf pstree tmux.man jq];
+    runtimeInputs = [fzf pstree tmux.man jq coreutils];
     text = ''
       ${tmux}/bin/tmux -f ${rtp}/tmux.conf "$@"
     '';
