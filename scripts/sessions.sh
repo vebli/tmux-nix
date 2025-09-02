@@ -38,7 +38,6 @@ manage_sessions() {
         local all_sessions proj_dirs num_active_sessions
         mapfile -t all_sessions < <(tmux_list_sessions)
         num_active_sessions=${#all_sessions[@]}
-        echo $num_active_sessions
 
         proj_dirs="$(list_project_dirs)"
         for dir in $proj_dirs; do
