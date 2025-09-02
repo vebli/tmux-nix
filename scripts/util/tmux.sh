@@ -17,7 +17,8 @@ tmux_current_session(){
 
 tmux_kill_session(){
     # Kill session without detaching
-    local name="$1"
+    local name="${1:-}"
+    if ! tmux has-session -t "$name" &>/dev/null; then return 0; fi
     if [[ "$(tmux_current_session)" == "$name" ]]; then 
         tmux_goto_session "default"
     fi
@@ -27,7 +28,7 @@ tmux_goto_session(){
     # Switches to session or creates new one if it doesn't exist
     local name="$1"
     shift
-    if tmux has-session -t "$name" 2>/dev/null; then
+    if tmux has-session -t "$name" &>/dev/null; then
         if tmux_is_running; then
             tmux switch-client -t "$name"
         else

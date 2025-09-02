@@ -71,7 +71,7 @@ manage_sessions() {
         )
 
         local name=${name_with_prefix/*\ /}
-        local fullpath="${dir_map[$name]}"
+        local fullpath="${dir_map[$name]:-}"
 
         case "$key" in 
             enter) tmux_goto_session "$name" -c "$fullpath"; return ;;
