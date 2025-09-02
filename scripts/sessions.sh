@@ -4,12 +4,19 @@ set -euo pipefail
 source "$(dirname "$0")/util/tmux.sh"
 
 PROJECT_DIRS=(
-    "$HOME/code/projects"
-    "$HOME/code/tools"
+    $HOME/code/projects/*
+    $HOME/code/tools/*
+    "/etc/nixos"
 )
 
-list_project_dirs(){
-    find "${PROJECT_DIRS[@]}" -mindepth 1 -maxdepth 1 -type d 2>/dev/null
+list_project_dirs() {
+    local p
+    shopt -s nullglob # Avoids printing '*'
+    for p in "${PROJECT_DIRS[@]}"; do
+        if [[ -d "$p" ]]; then
+            echo "$p"
+        fi
+    done
 }
 
 main(){
