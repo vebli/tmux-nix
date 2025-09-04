@@ -7,6 +7,6 @@ with tmuxPlugins; [
       set -g @continuum-restore 'on'
     '';
   }
-  # { plugin = open; }
+  { plugin = vim-tmux-navigator; }
   # { plugin = copycat; }
 ]

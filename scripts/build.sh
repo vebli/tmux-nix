@@ -60,7 +60,7 @@ menu(){
                 "$BUILD_CFG_FILE" |
             { grep . || echo "** no commands **"; } | \
             fzf --tmux --ansi \
-                --expect=ctrl-a,ctrl-d,ctrl-e,ctrl-c,enter,ctrl-q,ctrl-c,ctrl-g \
+                --expect=ctrl-a,ctrl-d,ctrl-e,ctrl-c,enter,ctrl-q,ctrl-c,ctrl-g,esc \
                 --header="enter: run | ctrl-a: add | ctrl-d: del | ctrl-e: edit | ctrl-g: gen | ctrl-q: quit"
         )
         if [[ "$selected" == *$'\t'* ]]; then
@@ -73,7 +73,7 @@ menu(){
             ctrl-d) delete "$dir" "$command_key";;
             ctrl-e) edit_json "$dir" "$command_key";;
             ctrl-g) gen_commands "$dir";;
-            ctrl-q|ctrl-c) return;;
+            ctrl-q|ctrl-c|esc) return;;
         esac
     done
 }

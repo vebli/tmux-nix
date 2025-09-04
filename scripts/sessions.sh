@@ -66,7 +66,7 @@ manage_sessions() {
             printf "%s\n" "${all_sessions[@]}" |
             sort -k1,1r |
             fzf --ansi --tmux --tac \
-                --expect=ctrl-q,ctrl-d,ctrl-e,ctrl-c,enter \
+                --expect=ctrl-q,ctrl-d,ctrl-e,ctrl-c,enter,esc\
                 --header="enter: attach | ctrl-d: delete | ctrl-c: clear | ctrl-q: quit"
         )
 
@@ -75,7 +75,7 @@ manage_sessions() {
 
         case "$key" in 
             enter) tmux_goto_session "$name" -c "$fullpath"; return ;;
-            ctrl-q) return ;;
+            ctrl-q|esc) return ;;
             ctrl-c) kill_unnamed_session ;;
             ctrl-d) tmux_kill_session "$name" ;;
         esac
