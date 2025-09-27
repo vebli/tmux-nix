@@ -60,15 +60,16 @@ menu(){
                 "$BUILD_CFG_FILE" |
             { grep . || echo "** no commands **"; } | \
             fzf --tmux --ansi \
-                --expect=ctrl-a,ctrl-d,ctrl-e,ctrl-c,enter,ctrl-q,ctrl-c,ctrl-g,esc \
-                --header="enter: run | ctrl-a: add | ctrl-d: del | ctrl-e: edit | ctrl-g: gen | ctrl-q: quit"
+                --expect=ctrl-a,ctrl-d,ctrl-e,ctrl-c,enter,ctrl-r,ctrl-q,ctrl-c,ctrl-g,esc \
+                --header="enter: run | r: run split | a: add | d: del | e: edit | g: gen | q: quit"
         )
         if [[ "$selected" == *$'\t'* ]]; then
             command_key="${selected%%$'\t'*}"  
             command_val="${selected#*$'\t'}"
         fi
         case "$key" in
-            enter) run_core "$dir" "$command_key" "$command_val"; return;;
+            enter) run_core_quiet "$dir" "$command_key" "$command_val"; return;;
+            ctrl-r) run_core_split "$dir" "$command_key" "$command_val"; return;;
             ctrl-a) setc "$dir";;
             ctrl-d) delete "$dir" "$command_key";;
             ctrl-e) edit_json "$dir" "$command_key";;
@@ -138,7 +139,7 @@ delete(){
     fi
 }
 setc(){ 
-    local dir="${1:-"$(pwd)"}" command_key="${2:-}" command_val="${3:-}" cfg=""
+    local dir="${1:-"$(pwd)"}" command_key="${2:-}" command_val="${3:-}" 
 
     if [ -n "$command_key" ] && [ -z "$command_val" ]; then
         command_val=$(tmux_prompt "Enter command for '$command_key': ") 
@@ -153,17 +154,15 @@ setc(){
 run(){
     local dir="${1:-"$(pwd)"}" command_key="${2:-}" command_val="" selected=""
 
-    if [ -z "$command_key" ]; then 
-        selected="$(jq -r --arg dir "$dir" \
-            '.[$dir] | to_entries[] | "\(.key)\t\(.value)"' \
-            "$BUILD_CFG_FILE" |\
-            fzf --tmux --ansi 
-        )" 
-        command_key="${selected%%$'\t'*}"  
-        command_val="${selected#*$'\t'}"
-    fi
+    selected="$(jq -r --arg dir "$dir" \
+        '.[$dir] | to_entries[] | "\(.key)\t\(.value)"' \
+        "$BUILD_CFG_FILE" |\
+        fzf --tmux --ansi 
+    )" 
+    command_key="${selected%%$'\t'*}"  
+    command_val="${selected#*$'\t'}"
 
-    run_core "$dir" "$command_key" "$command_val"
+    run_core_quiet "$dir" "$command_key" "$command_val"
 }
 
 usage() {
@@ -190,21 +189,22 @@ Examples:
   ./build.sh edit
 
 EOF
-    return 0
+}
+run_core_split(){ local dir="${1:-}" command_key="${2:-}" command_val="" 
+    command_val="$(get_cfg_command "$dir" "$command_key")" 
+    [ -z "$command_val" ] || [ "$command_val" == "null" ] && return 1;
+    tmux split-window -v -l 30% "cd '$dir' && { $command_val; } 2>&1"
 }
 
-
-run_core(){
+run_core_quiet(){
     local dir="${1:-}" command_key="${2:-}" command_val=""
-
     command_val="$(get_cfg_command "$dir" "$command_key")"
+    [ -z "$command_val" ] || [ "$command_val" == "null" ] && return 1;
+   
     # sed to filter cursor movement escape codes
-    if [ -n "$command_val" ] && [ "$command_val" != "null" ]; then
-        tmux split-window -v -l 30% "cd '$dir' && { $command_val; } 2>&1 | sed -r 's/\x1B\[([0-9;]*[A-Za-z])//g' | tee $BUILD_CFG_LOG_DIR/$command_key.log;"
-    else 
-        return 1
-    fi
-    return 0
+    (cd "$dir" && eval "$command_val")  \
+        | sed -r 's/\x1B\[([0-9;]*[A-Za-z])//g' \
+        | tee "$BUILD_CFG_LOG_DIR/$command_key.log"
 }
 
 show_log(){
