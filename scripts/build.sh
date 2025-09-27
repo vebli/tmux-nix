@@ -201,10 +201,11 @@ run_core_quiet(){
     command_val="$(get_cfg_command "$dir" "$command_key")"
     [ -z "$command_val" ] || [ "$command_val" == "null" ] && return 1;
    
+
     # sed to filter cursor movement escape codes
     (cd "$dir" && eval "$command_val")  \
         | sed -r 's/\x1B\[([0-9;]*[A-Za-z])//g' \
-        | tee "$BUILD_CFG_LOG_DIR/$command_key.log"
+        > "$BUILD_CFG_LOG_DIR/$command_key.log"
 }
 
 show_log(){
