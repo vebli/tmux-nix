@@ -68,8 +68,8 @@ menu(){
             command_val="${selected#*$'\t'}"
         fi
         case "$key" in
-            enter) run_core_quiet "$dir" "$command_key" "$command_val"; return;;
-            ctrl-r) run_core_split "$dir" "$command_key" "$command_val"; return;;
+            enter) run_core "$dir" "$command_key" "$command_val"; return;;
+            ctrl-r) run_core_keepalive "$dir" "$command_key" "$command_val"; return;;
             ctrl-a) setc "$dir";;
             ctrl-d) delete "$dir" "$command_key";;
             ctrl-e) edit_json "$dir" "$command_key";;
