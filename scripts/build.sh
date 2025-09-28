@@ -190,22 +190,23 @@ Examples:
 
 EOF
 }
-run_core_split(){ local dir="${1:-}" command_key="${2:-}" command_val="" 
+
+run_core_keepalive(){ local dir="${1:-}" command_key="${2:-}" command_val="" 
     command_val="$(get_cfg_command "$dir" "$command_key")" 
     [ -z "$command_val" ] || [ "$command_val" == "null" ] && return 1;
-    tmux split-window -v -l 30% "cd '$dir' && { $command_val; } 2>&1"
+    # tmux split-window -v -l 30% "cd '$dir' && { $command_val; } 2>&1"
+    tmux split-window -v -l 30% "cd '$dir' && bash -c '$command_val & while [ : ]; do sleep 1; done'"
 }
 
-run_core_quiet(){
+run_core(){
     local dir="${1:-}" command_key="${2:-}" command_val=""
     command_val="$(get_cfg_command "$dir" "$command_key")"
     [ -z "$command_val" ] || [ "$command_val" == "null" ] && return 1;
-   
-
+    tmux split-window -v -l 30% "cd '$dir' && { $command_val; } 2>&1"
     # sed to filter cursor movement escape codes
-    (cd "$dir" && eval "$command_val")  \
-        | sed -r 's/\x1B\[([0-9;]*[A-Za-z])//g' \
-        > "$BUILD_CFG_LOG_DIR/$command_key.log"
+    # (cd "$dir" && eval "$command_val")  \
+    #     | sed -r 's/\x1B\[([0-9;]*[A-Za-z])//g' \
+    #     > "$BUILD_CFG_LOG_DIR/$command_key.log"
 }
 
 show_log(){
