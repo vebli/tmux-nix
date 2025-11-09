@@ -74,7 +74,13 @@ manage_sessions() {
         local fullpath="${dir_map[$name]:-}"
 
         case "$key" in 
-            enter) tmux_goto_session "$name" -c "$fullpath"; return ;;
+            enter) 
+                if tmuxinator list | grep -q "$name"; then
+                    tmuxinator start "$name"
+                else
+                    tmux_goto_session "$name" -c "$fullpath"; 
+                fi
+                return ;;
             ctrl-q|esc) return ;;
             ctrl-c) kill_unnamed_session ;;
             ctrl-d) tmux_kill_session "$name" ;;

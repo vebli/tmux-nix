@@ -66,13 +66,14 @@ menu(){
         if [[ "$selected" == *$'\t'* ]]; then
             command_key="${selected%%$'\t'*}"  
             command_val="${selected#*$'\t'}"
+        else continue
         fi
         case "$key" in
             enter) run_core "$dir" "$command_key" "$command_val"; return;;
             ctrl-r) run_core_keepalive "$dir" "$command_key" "$command_val"; return;;
             ctrl-a) setc "$dir";;
             ctrl-d) delete "$dir" "$command_key";;
-            ctrl-e) edit_json "$dir" "$command_key";;
+            # ctrl-e) edit_json "$dir" "$command_key";; //TODO 
             ctrl-g) gen_commands "$dir";;
             ctrl-q|ctrl-c|esc) return;;
         esac
